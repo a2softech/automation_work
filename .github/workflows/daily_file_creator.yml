@@ -1,8 +1,8 @@
-name: Daily AI Programmer (Free Tier)
+name: Daily AI Programmer (Fixed Syntax)
 
 on:
   schedule:
-    - cron: '30 0 * * *' # 6:00 AM IST par chalega
+    - cron: '30 0 * * *'
   workflow_dispatch: 
 
 permissions:
@@ -13,29 +13,37 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Generate AI Program
+        env:
+          GEMINI_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: |
+          # 1. Date set karna
           TODAY=$(TZ="Asia/Kolkata" date +'%d-%m-%Y')
           FILENAME="logic_program_${TODAY}.py"
 
-          # Gemini 1.5 Flash (Free Tier) ko call karna
-          RESPONSE=$(curl -s -X POST "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${{ secrets.GEMINI_API_KEY }}" \
+          # 2. Gemini API se code mangwana
+          # Yahan humne shell variable use kiya hai taaki syntax error na aaye
+          RESPONSE=$(curl -s -X POST "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=$GEMINI_KEY" \
               -H 'Content-Type: application/json' \
               -d '{
                 "contents": [{
-                  "parts":[{"text": "Give me a unique Python programming logic/snippet for today. Include a small comment explaining it. Give ONLY the code, no markdown blocks like ```python."}]
+                  "parts":[{"text": "Give me a unique Python programming logic or snippet for today. Include a small comment explaining it. Give ONLY the code, no markdown blocks like ```python."}]
                 }]
               }')
 
-          # Response se raw text nikalna
-          echo "$RESPONSE" | jq -r '.candidates[0].content.parts[0].text' > $FILENAME
+          # 3. Response check aur code extract karna
+          echo "$RESPONSE" | jq -r '.candidates[0].content.parts[0].text' > "$FILENAME"
 
-          # GitHub API ke liye content encode karna
-          BASE64_CONTENT=$(cat $FILENAME | base64 -w 0)
+          # 4. Content ko Base64 me convert karna
+          BASE64_CONTENT=$(cat "$FILENAME" | base64 -w 0)
 
-          # Repository me file push karna
+          # 5. GitHub API se file push karna
+          # Message ko variable me rakha hai taaki quotes ka lafda na ho
+          MESSAGE="AI Logic for $TODAY"
+          
           curl -s -L \
             -X PUT \
             -H "Accept: application/vnd.github+json" \
             -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
-            [https://api.github.com/repos/$](https://api.github.com/repos/$){{ github.repository }}/contents/$FILENAME \
-            -d "{\"message\":\"AI Logic: $TODAY\",\"content\":\"$BASE64_CONTENT\"}"
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            [https://api.github.com/repos/$](https://api.github.com/repos/$){{ github.repository }}/contents/"$FILENAME" \
+            -d "{\"message\":\"$MESSAGE\",\"content\":\"$BASE64_CONTENT\"}"
