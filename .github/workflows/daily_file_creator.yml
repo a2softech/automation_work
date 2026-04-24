@@ -1,4 +1,4 @@
-name: Daily AI Programmer (Final No-Error Version)
+name: Daily AI Programmer (Debug Mode)
 
 on:
   schedule:
@@ -16,40 +16,42 @@ jobs:
         env:
           GEMINI_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: |
-          # 1. Date aur Unique Time nikalna (taaki SHA error na aaye)
           TIMESTAMP=$(TZ="Asia/Kolkata" date +'%d-%m-%Y_%H-%M-%S')
           FILENAME="logic_program_${TIMESTAMP}.py"
           
-          # 2. Gemini API Payload
+          # 1. Gemini API Payload (Simplified)
           cat <<EOF > payload.json
           {
             "contents": [{
-              "parts":[{"text": "Write a unique Python program for a beginner. Provide ONLY the code. No markdown formatting like \`\`\`."}]
+              "parts":[{"text": "Write a short Python script to print Fibonacci series. Provide ONLY code."}]
             }]
           }
           EOF
 
-          # 3. API Call
+          # 2. API Call (With detailed error check)
           RESPONSE=$(curl -s -X POST "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=$GEMINI_KEY" \
               -H 'Content-Type: application/json' \
               -d @payload.json)
 
-          # 4. Extracting code
+          # 3. Check if response is valid JSON and has content
           AI_CODE=$(echo "$RESPONSE" | jq -r '.candidates[0].content.parts[0].text // empty')
 
           if [ -z "$AI_CODE" ] || [ "$AI_CODE" == "null" ]; then
-             echo "# AI failed. Manual entry for $TIMESTAMP" > "$FILENAME"
-             echo "print('Hello from Automation!')" >> "$FILENAME"
+             echo "# API Error or Safety Filter Blocked this." > "$FILENAME"
+             echo "# Full Response for Debugging:" >> "$FILENAME"
+             echo "'''" >> "$FILENAME"
+             echo "$RESPONSE" >> "$FILENAME"
+             echo "'''" >> "$FILENAME"
           else
              echo "$AI_CODE" > "$FILENAME"
           fi
 
-          # 5. Push to GitHub (New unique filename will never need a SHA)
+          # 4. Push to GitHub
           BASE64_CONTENT=$(cat "$FILENAME" | base64 -w 0)
           
           cat <<EOF > github_payload.json
           {
-            "message": "AI Logic for $TIMESTAMP",
+            "message": "AI Debug Run $TIMESTAMP",
             "content": "$BASE64_CONTENT"
           }
           EOF
