@@ -2,35 +2,32 @@ name: Daily File Creator
 
 on:
   schedule:
-    # Ye Indian Time ke hisaab se har roz subah 5:30 baje (00:00 UTC) chalega
     - cron: '0 0 * * *'
-  workflow_dispatch: # Isse aap manually bhi test kar sakte hain
+  workflow_dispatch: 
+
+# Isse permission wala error (128) solve ho jayega
+permissions:
+  contents: write
 
 jobs:
   create-file:
     runs-on: ubuntu-latest
     steps:
+      # Updated to v4 for Node.js 24 compatibility
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Create Daily File
         run: |
-          # Aaj ki date variable me store karna (Format: DD-MM-YYYY)
           TODAY=$(date +'%d-%m-%Y')
-          
-          # File ka naam set karna: file_24-04-2026.txt
           FILENAME="file_${TODAY}.txt"
-          
-          # File ke andar content likhna
           echo "Today date is ${TODAY}" > $FILENAME
-          
           echo "File created: $FILENAME"
 
       - name: Commit and Push
         run: |
-          git config --global user.name "GitHub Action"
-          git config --global user.email "action@github.com"
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
           git add .
-          # Agar koi change nahi hai to error na aaye isliye || exit 0
           git commit -m "Add daily file for $(date +'%d-%m-%Y')" || exit 0
           git push
