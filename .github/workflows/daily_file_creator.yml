@@ -3,7 +3,7 @@ name: Daily File Creator
 on:
   schedule:
     - cron: '0 0 * * *'
-  workflow_dispatch:
+  workflow_dispatch: 
 
 permissions:
   contents: write
@@ -11,13 +11,8 @@ permissions:
 jobs:
   create-file:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Setup Node.js (avoid deprecation warning)
-        uses: actions/setup-node@v4
-        with:
-          node-version: '24'
-
+      # Checkout v4 use karein bina kisi force env ke
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
@@ -25,6 +20,7 @@ jobs:
 
       - name: Create Daily File
         run: |
+          # Indian Date format
           TODAY=$(TZ="Asia/Kolkata" date +'%d-%m-%Y')
           FILENAME="file_${TODAY}.txt"
           echo "Today date is ${TODAY}" > $FILENAME
@@ -34,12 +30,6 @@ jobs:
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
-
           git add .
-
-          if git diff --cached --quiet; then
-            echo "No changes to commit"
-          else
-            git commit -m "Add daily file for $(TZ="Asia/Kolkata" date +'%d-%m-%Y')"
-            git push
-          fi
+          # Sirf tab commit karein agar koi change ho (safety check)
+          git diff --quiet && git diff --staged --quiet || (git commit -m "Add daily file for $(TZ="Asia/Kolkata" date +'%d-%m-%Y')" && git push)
