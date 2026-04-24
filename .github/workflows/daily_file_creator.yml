@@ -1,4 +1,4 @@
-name: Daily AI Programmer (Fixed Syntax)
+name: Daily AI Programmer (Final Stable Version)
 
 on:
   schedule:
@@ -16,34 +16,43 @@ jobs:
         env:
           GEMINI_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: |
-          # 1. Date set karna
+          # 1. Date aur Filename set karna
           TODAY=$(TZ="Asia/Kolkata" date +'%d-%m-%Y')
           FILENAME="logic_program_${TODAY}.py"
+          
+          # 2. Gemini API request payload file banana (Isse syntax error nahi aayega)
+          cat <<EOF > payload.json
+          {
+            "contents": [{
+              "parts":[{"text": "Give me a unique Python programming logic or snippet for today. Include a small comment explaining it. Give ONLY the code, no markdown blocks like \`\`\`python."}]
+            }]
+          }
+          EOF
 
-          # 2. Gemini API se code mangwana
-          # Yahan humne shell variable use kiya hai taaki syntax error na aaye
+          # 3. API call karna
           RESPONSE=$(curl -s -X POST "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=$GEMINI_KEY" \
               -H 'Content-Type: application/json' \
-              -d '{
-                "contents": [{
-                  "parts":[{"text": "Give me a unique Python programming logic or snippet for today. Include a small comment explaining it. Give ONLY the code, no markdown blocks like ```python."}]
-                }]
-              }')
+              -d @payload.json)
 
-          # 3. Response check aur code extract karna
+          # 4. Code extract karna aur file banana
           echo "$RESPONSE" | jq -r '.candidates[0].content.parts[0].text' > "$FILENAME"
 
-          # 4. Content ko Base64 me convert karna
+          # 5. Base64 encoding
           BASE64_CONTENT=$(cat "$FILENAME" | base64 -w 0)
 
-          # 5. GitHub API se file push karna
-          # Message ko variable me rakha hai taaki quotes ka lafda na ho
-          MESSAGE="AI Logic for $TODAY"
-          
+          # 6. GitHub API payload file banana
+          cat <<EOF > github_payload.json
+          {
+            "message": "AI Logic for $TODAY",
+            "content": "$BASE64_CONTENT"
+          }
+          EOF
+
+          # 7. File push karna
           curl -s -L \
             -X PUT \
             -H "Accept: application/vnd.github+json" \
             -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
             -H "X-GitHub-Api-Version: 2022-11-28" \
-            [https://api.github.com/repos/$](https://api.github.com/repos/$){{ github.repository }}/contents/"$FILENAME" \
-            -d "{\"message\":\"$MESSAGE\",\"content\":\"$BASE64_CONTENT\"}"
+            https://api.github.com/repos/${{ github.repository }}/contents/"$FILENAME" \
+            -d @github_payload.json
