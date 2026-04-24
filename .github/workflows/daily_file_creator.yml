@@ -1,35 +1,41 @@
-name: Daily File Creator (Zero Warnings)
+name: Daily AI Programmer (Free Tier)
 
 on:
   schedule:
-    - cron: '0 0 * * *'
+    - cron: '30 0 * * *' # 6:00 AM IST par chalega
   workflow_dispatch: 
 
-# API ke through file likhne ke liye permission
 permissions:
   contents: write
 
 jobs:
-  create-file:
+  generate-code:
     runs-on: ubuntu-latest
     steps:
-      - name: Create File Directly via GitHub API
+      - name: Generate AI Program
         run: |
-          # 1. Aaj ki date nikalna (Indian Time)
           TODAY=$(TZ="Asia/Kolkata" date +'%d-%m-%Y')
-          FILENAME="file_${TODAY}.txt"
-          
-          # 2. File ke andar ka text likhna
-          CONTENT="Today date is ${TODAY}"
-          
-          # 3. Text ko Base64 format me badalna (GitHub API ko base64 samajh aata hai)
-          BASE64_CONTENT=$(echo -n "$CONTENT" | base64 -w 0)
-          
-          # 4. Direct GitHub API ko hit karke file create karna (Bina kisi Git action ke)
+          FILENAME="logic_program_${TODAY}.py"
+
+          # Gemini 1.5 Flash (Free Tier) ko call karna
+          RESPONSE=$(curl -s -X POST "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${{ secrets.GEMINI_API_KEY }}" \
+              -H 'Content-Type: application/json' \
+              -d '{
+                "contents": [{
+                  "parts":[{"text": "Give me a unique Python programming logic/snippet for today. Include a small comment explaining it. Give ONLY the code, no markdown blocks like ```python."}]
+                }]
+              }')
+
+          # Response se raw text nikalna
+          echo "$RESPONSE" | jq -r '.candidates[0].content.parts[0].text' > $FILENAME
+
+          # GitHub API ke liye content encode karna
+          BASE64_CONTENT=$(cat $FILENAME | base64 -w 0)
+
+          # Repository me file push karna
           curl -s -L \
             -X PUT \
             -H "Accept: application/vnd.github+json" \
             -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
-            -H "X-GitHub-Api-Version: 2022-11-28" \
-            https://api.github.com/repos/${{ github.repository }}/contents/$FILENAME \
-            -d "{\"message\":\"Add daily file for $TODAY\",\"content\":\"$BASE64_CONTENT\"}"
+            [https://api.github.com/repos/$](https://api.github.com/repos/$){{ github.repository }}/contents/$FILENAME \
+            -d "{\"message\":\"AI Logic: $TODAY\",\"content\":\"$BASE64_CONTENT\"}"
