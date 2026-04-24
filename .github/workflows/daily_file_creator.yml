@@ -1,4 +1,4 @@
-name: Daily AI Programmer (Debug Mode)
+name: Daily AI Programmer (API Updated)
 
 on:
   schedule:
@@ -19,21 +19,21 @@ jobs:
           TIMESTAMP=$(TZ="Asia/Kolkata" date +'%d-%m-%Y_%H-%M-%S')
           FILENAME="logic_program_${TIMESTAMP}.py"
           
-          # 1. Gemini API Payload (Simplified)
+          # 1. Payload
           cat <<EOF > payload.json
           {
             "contents": [{
-              "parts":[{"text": "Write a short Python script to print Fibonacci series. Provide ONLY code."}]
+              "parts":[{"text": "Write a unique, short Python script for a beginner. Provide ONLY the python code and comments, nothing else."}]
             }]
           }
           EOF
 
-          # 2. API Call (With detailed error check)
-          RESPONSE=$(curl -s -X POST "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=$GEMINI_KEY" \
+          # 2. API Call (Model updated from 1.5-flash to 2.5-flash)
+          RESPONSE=$(curl -s -X POST "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=$GEMINI_KEY" \
               -H 'Content-Type: application/json' \
               -d @payload.json)
 
-          # 3. Check if response is valid JSON and has content
+          # 3. Extract Code
           AI_CODE=$(echo "$RESPONSE" | jq -r '.candidates[0].content.parts[0].text // empty')
 
           if [ -z "$AI_CODE" ] || [ "$AI_CODE" == "null" ]; then
@@ -51,7 +51,7 @@ jobs:
           
           cat <<EOF > github_payload.json
           {
-            "message": "AI Debug Run $TIMESTAMP",
+            "message": "AI Code for $TIMESTAMP",
             "content": "$BASE64_CONTENT"
           }
           EOF
